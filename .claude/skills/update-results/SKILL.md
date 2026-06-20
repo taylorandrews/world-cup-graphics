@@ -51,6 +51,10 @@ and everything else recomputes.
 6. **Commit** with a clear message, e.g.
    `git commit -am "Add June 24 results (matchday 3, Groups A–B)"`.
 
+7. **Deploy to the portal.** This is mandatory — see the "Portal deploy"
+   section in CLAUDE.md. Run `npm run build`, then sync and push the portal
+   repo. Do not skip this or leave it for the user.
+
 ## Notes and gotchas
 
 - **Don't touch** `_palette.generated.css`, standings output, or the bracket

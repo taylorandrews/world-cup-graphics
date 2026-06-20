@@ -100,12 +100,35 @@ scripts/
 - After changing results, run `npm run validate` to catch typos
   (unknown team codes, duplicate matches, malformed scores).
 
+## Portal deploy (required after any visual change)
+
+This project is published to the **portal** — a Cloudflare Pages app at
+`~/Documents/projects/coding-fun/portal` — so it's viewable on the phone.
+**After committing any change to `src/` or `index.html`, always deploy to the
+portal.** Do not skip this step or leave it for the user to do manually.
+
+```bash
+# 1. Build the self-contained output bundle (palette + validate + bundle)
+npm run build
+
+# 2. Sync into the portal repo
+(cd ~/Documents/projects/coding-fun/portal && npm run sync)
+
+# 3. Commit and push the portal (Cloudflare auto-deploys from main)
+(cd ~/Documents/projects/coding-fun/portal && git add -A && git commit -m "Auto-deploy: <subject from this repo's commit>" && git push)
+```
+
+If the portal repo isn't present at that path, warn the user instead of
+silently skipping. The portal route is
+`/world-cup-26/live-tracker/index.html`.
+
 ## Local dev
 
 ```bash
 npm run dev        # serve at http://localhost:8080 (ES modules need http://, not file://)
 npm run validate   # check fixtures + Annex C matrix integrity
 npm run build:palette   # regenerate color vars after editing palette.js
+npm run build      # full build: palette + validate + portal bundle
 ```
 
 ## Provenance
