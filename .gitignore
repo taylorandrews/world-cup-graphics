@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Temp / build scratch
+*.tmp
+.cache/
+
+# Claude Code local session settings
+.claude/settings.local.json

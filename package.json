@@ -1,0 +1,24 @@
+{
+  "name": "wc26-tracker",
+  "version": "1.0.0",
+  "description": "Static 2026 FIFA World Cup group-stage tracker: standings, head-to-head matrices, 48-team ranking, and a live bracket.",
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes serve@14 -l 8080 .",
+    "validate": "node scripts/validate.mjs",
+    "build:palette": "node scripts/build-palette.mjs",
+    "build": "npm run build:palette && npm run validate"
+  },
+  "keywords": [
+    "world-cup",
+    "2026",
+    "fifa",
+    "football",
+    "soccer",
+    "bracket",
+    "standings",
+    "visualization"
+  ],
+  "license": "MIT",
+  "private": true
+}
