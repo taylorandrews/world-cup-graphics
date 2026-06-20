@@ -168,76 +168,122 @@ function renderKey(){
   return s;
 }
 
-// ---------- MINIATURE BRACKET ----------
-// a colored cell for a resolved slot
-function miniCell(letter, pos, label, tentative){
-  if(!letter){
-    return `<div class="cell tbd">${label||'—'}</div>`;
-  }
-  const prov = tentative ? ' prov' : '';
-  return `<div class="cell${prov}" style="background:var(--g${letter}${pos});color:var(--t${letter}${pos})">${label}</div>`;
-}
-
-// resolve a fixed group slot (W/R) -> {letter,pos,label,tentative}
-function slotColor(ref){
+// ---------- LIVE BRACKET (real tournament tree) ----------
+// Each R32 slot resolves to a {letter,pos,label,tentative} tile. We use the
+// 3-letter code as the label so tiles stay legible at phone widths; the color
+// (group hue × finish ramp) carries the identity, matching the ranking above.
+function slotTile(ref){
   const pos = ref.t==='W' ? 0 : 1;
   const done = groupComplete(ref.g);
-  const nm = ref.t==='W' ? fullName(ref.g,0) : fullName(ref.g,1);
-  const label = nm || (ref.t==='W'?('Win '+ref.g):('2nd '+ref.g));
+  const code = codeName(ref.g, pos);
+  const label = code || (ref.t==='W' ? ('Win '+ref.g) : ('2nd '+ref.g));
   return {letter:ref.g, pos, label, tentative:!done};
 }
-function thirdColor(matchNum, alloc){
+function thirdTile(matchNum, alloc){
   if(alloc.map && alloc.map[String(matchNum)]){
     const g = alloc.map[String(matchNum)];
-    const nm = fullName(g,2);
-    return {letter:g, pos:2, label:nm || ('3rd '+g), tentative:!alloc.complete};
+    const code = codeName(g, 2);
+    return {letter:g, pos:2, label: code || ('3rd '+g), tentative:!alloc.complete};
   }
   return {letter:null, pos:2, label:'3rd ?', tentative:true};
 }
 
-export function renderMiniBracket(){
-  const alloc = thirdAllocation();
-  const r32 = R32.map(fx=>{
-    const h = fx.home.t==='T' ? thirdColor(fx.m,alloc) : slotColor(fx.home);
-    const a = fx.away.t==='T' ? thirdColor(fx.m,alloc) : slotColor(fx.away);
-    return {...fx, H:h, A:a};
-  });
+// One team line inside a bracket card.
+function bracketLine(tile){
+  if(!tile.letter) return `<div class="ln tbd">${tile.label}</div>`;
+  const prov = tile.tentative ? ' prov' : '';
+  return `<div class="ln${prov}" style="background:var(--g${tile.letter}${tile.pos});color:var(--t${tile.letter}${tile.pos})">${tile.label}</div>`;
+}
 
-  const r32cards = r32.map(x=>{
-    const kc = x.kc ? '<span class="kc-dot">KC</span>' : '';
-    return `<div class="mm${x.kc?' kc':''}">
-      <div class="mm-h"><span>M${x.m}</span>${kc}</div>
-      ${miniCell(x.H.letter,x.H.pos,x.H.label,x.H.tentative)}
-      ${miniCell(x.A.letter,x.A.pos,x.A.label,x.A.tentative)}
+// Build a node tree from a root match number, recursing through R16/QF/SF.
+function buildBracketTree(rootNum, r32map, defByNum){
+  function node(m){
+    if(r32map[m]) return {m, leaf:true, ...r32map[m]};
+    const d = defByNum[m];
+    return {m, kc:d.kc, a:node(d.a), b:node(d.b)};
+  }
+  return node(rootNum);
+}
+
+// DFS pre-order keeps sibling pairs adjacent at every depth, which is exactly
+// what the CSS connector lines need. Returns columns leaf→root (R32 … SF).
+function bracketLevels(root){
+  const lv = [];
+  (function walk(n, depth){
+    (lv[depth] = lv[depth] || []).push(n);
+    if(!n.leaf){ walk(n.a, depth+1); walk(n.b, depth+1); }
+  })(root, 0);
+  return lv.reverse();
+}
+
+const ROUND_LABELS = ['R32','R16','QF','SF'];
+
+function bracketCard(n){
+  const kc = n.kc ? '<span class="bkc">KC</span>' : '';
+  const head = `<div class="bcard-h"><span>M${n.m}</span>${kc}</div>`;
+  const l1 = n.leaf ? bracketLine(n.H) : `<div class="ln tbd">W ${n.a.m}</div>`;
+  const l2 = n.leaf ? bracketLine(n.A) : `<div class="ln tbd">W ${n.b.m}</div>`;
+  return `<div class="bm"><div class="bcard${n.kc?' kc':''}">${head}${l1}${l2}</div></div>`;
+}
+
+function renderHalf(root){
+  const levels = bracketLevels(root); // R32, R16, QF, SF
+  const cols = levels.map((nodes, ci) => {
+    const cards = nodes.map(bracketCard).join('');
+    return `<div class="bcol">
+      <div class="bcol-h">${ROUND_LABELS[ci] || ''}</div>
+      <div class="bcol-body">${cards}</div>
     </div>`;
   }).join('');
+  return `<div class="bracket">${cols}</div>`;
+}
 
-  function laterCard(fx, fin){
-    const kc = fx.kc ? '<span class="kc-dot">KC</span>' : '';
-    const hd = fin ? (fx.label||'Final') : ('M'+fx.m);
-    return `<div class="mm${fx.kc?' kc':''}${fin?' fin':''}">
-      <div class="mm-h"><span>${hd}</span>${kc}</div>
-      <div class="cell tbd">W M${fx.a}</div>
-      <div class="cell tbd">W M${fx.b}</div>
-    </div>`;
-  }
-  const r16 = LATER.R16.map(f=>laterCard(f)).join('');
-  const qf  = LATER.QF.map(f=>laterCard(f)).join('');
-  const sf  = LATER.SF.map(f=>laterCard(f)).join('');
-  const fin = LATER.F.map(f=>laterCard(f,true)).join('');
+export function renderMiniBracket(){
+  const alloc = thirdAllocation();
+
+  // Resolve every R32 match's two tiles up front.
+  const r32map = {};
+  R32.forEach(fx => {
+    const H = fx.home.t==='T' ? thirdTile(fx.m, alloc) : slotTile(fx.home);
+    const A = fx.away.t==='T' ? thirdTile(fx.m, alloc) : slotTile(fx.away);
+    r32map[fx.m] = {kc:fx.kc, H, A};
+  });
+  // Lookup for later-round match definitions.
+  const defByNum = {};
+  ['R16','QF','SF','F'].forEach(r => LATER[r].forEach(f => (defByNum[f.m] = f)));
+
+  // The final (M104) feeds from the two semi-final winners (M101, M102),
+  // which root the top and bottom halves of the draw.
+  const finalDef = LATER.F[0];
+  const topRoot = buildBracketTree(finalDef.a, r32map, defByNum);
+  const botRoot = buildBracketTree(finalDef.b, r32map, defByNum);
+
+  const finalCard = `<div class="bfinal${finalDef.kc?' kc':''}">
+    <div class="bfinal-h">Final · Jul 19 · New York NJ</div>
+    <div class="bfinal-body">
+      <div class="ln tbd">W ${finalDef.a}</div>
+      <div class="bfinal-trophy">🏆</div>
+      <div class="ln tbd">W ${finalDef.b}</div>
+    </div>
+  </div>`;
 
   return `
   <section class="block">
     <h2 class="bigtitle">Live bracket</h2>
-    <p class="blurb">The knockout draw as it stands if the group stage ended now — rendered as a color map. Each tile is tinted by the team's group and finish: dark = group winner, medium = runner-up, light = third place. Faded tiles are provisional (group unfinished or third-place picture not locked); grey tiles await a knockout result.</p>
+    <p class="blurb">The knockout draw as it stands if the group stage ended now. Read it like any bracket — winners flow left to right toward the final. Each tile is tinted by the team's group and finish: dark = group winner, medium = runner-up, light = third place. Faded tiles are provisional (group unfinished or the third-place picture not locked); grey tiles await a knockout result.</p>
     ${renderKey()}
-    <div class="mini-rounds">
-      <div class="mini-round"><div class="round-h">Round of 32 · Jun 28 – Jul 3</div><div class="mini-grid r32">${r32cards}</div></div>
-      <div class="mini-round"><div class="round-h">Round of 16 · Jul 4 – 7</div><div class="mini-grid r16">${r16}</div></div>
-      <div class="mini-round"><div class="round-h">Quarter-finals · Jul 9 – 11</div><div class="mini-grid qf">${qf}</div></div>
-      <div class="mini-round"><div class="round-h">Semi-finals · Jul 14 – 15</div><div class="mini-grid sf">${sf}</div></div>
-      <div class="mini-round"><div class="round-h">Final · Jul 19 · New York NJ</div><div class="mini-grid fin">${fin}</div></div>
+    <div class="bracket-wrap">
+      <div class="bhalf">
+        <div class="bhalf-h">Top half <span>→ Semi-final M101</span></div>
+        <div class="bscroll">${renderHalf(topRoot)}</div>
+      </div>
+      ${finalCard}
+      <div class="bhalf">
+        <div class="bhalf-h">Bottom half <span>→ Semi-final M102</span></div>
+        <div class="bscroll">${renderHalf(botRoot)}</div>
+      </div>
     </div>
+    <p class="ranknote brnote">Round of 32: Jun 28 – Jul 3 · Round of 16: Jul 4 – 7 · Quarter-finals: Jul 9 – 11 · Semi-finals: Jul 14 – 15 · Final: Jul 19. Match 87 (R32) and Match 100 (QF) are in Kansas City.</p>
   </section>`;
 }
 
