@@ -1,0 +1,8 @@
+{
+  "name": "World Cup 26",
+  "icon": "⚽",
+  "group": "World Cup",
+  "outputs": [
+    { "title": "Live Tracker", "path": "output/index.html" }
+  ]
+}

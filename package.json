@@ -7,7 +7,8 @@
     "dev": "npx --yes serve@14 -l 8080 .",
     "validate": "node scripts/validate.mjs",
     "build:palette": "node scripts/build-palette.mjs",
-    "build": "npm run build:palette && npm run validate"
+    "build:portal": "node scripts/build-portal.mjs",
+    "build": "npm run build:palette && npm run validate && npm run build:portal"
   },
   "keywords": [
     "world-cup",
