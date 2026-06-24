@@ -6,7 +6,7 @@
    t:"H:MM"  kick-off time in Central Time.
    v:"City"  venue city / short location.
    ============================================================ */
-export const AS_OF = "Updated June 23, 2026 — through June 22 matches (June 23 in progress)";
+export const AS_OF = "Updated June 24, 2026 — through June 23 matches";
 
 export const DATA = [
  {g:"A", teams:{MEX:"Mexico", RSA:"South Africa", KOR:"South Korea", CZE:"Czechia"}, matches:[
@@ -92,16 +92,16 @@ export const DATA = [
  {g:"K", teams:{POR:"Portugal", COD:"DR Congo", UZB:"Uzbekistan", COL:"Colombia"}, matches:[
    {md:"Jun 17", h:"POR", a:"COD", score:[1,1], t:"12:00", v:"Houston"},
    {md:"Jun 17", h:"COL", a:"UZB", score:[3,1], t:"8:00", v:"Mexico City"},
-   {md:"Jun 23", h:"POR", a:"UZB", t:"12:00", v:"Houston"},
-   {md:"Jun 23", h:"COL", a:"COD", t:"9:00", v:"Guadalajara"},
+   {md:"Jun 23", h:"POR", a:"UZB", score:[5,0], t:"12:00", v:"Houston"},
+   {md:"Jun 23", h:"COL", a:"COD", score:[0,0], t:"9:00", v:"Guadalajara"},
    {md:"Jun 27", h:"COL", a:"POR", t:"6:30", v:"Miami"},
    {md:"Jun 27", h:"COD", a:"UZB", t:"6:30", v:"Atlanta"},
  ]},
  {g:"L", teams:{ENG:"England", CRO:"Croatia", GHA:"Ghana", PAN:"Panama"}, tag:"England's group", matches:[
    {md:"Jun 17", h:"ENG", a:"CRO", score:[4,2], t:"3:00", v:"Arlington"},
    {md:"Jun 17", h:"GHA", a:"PAN", score:[1,0], t:"6:00", v:"Toronto"},
-   {md:"Jun 23", h:"ENG", a:"GHA", t:"3:00", v:"Foxborough"},
-   {md:"Jun 23", h:"PAN", a:"CRO", t:"6:00", v:"Toronto"},
+   {md:"Jun 23", h:"ENG", a:"GHA", score:[0,0], t:"3:00", v:"Foxborough"},
+   {md:"Jun 23", h:"PAN", a:"CRO", score:[0,1], t:"6:00", v:"Toronto"},
    {md:"Jun 27", h:"PAN", a:"ENG", t:"4:00", v:"East Rutherford"},
    {md:"Jun 27", h:"CRO", a:"GHA", t:"4:00", v:"Philadelphia"},
  ]},
