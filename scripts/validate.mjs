@@ -11,6 +11,7 @@
 
 import { DATA } from '../src/data/fixtures.js';
 import { THIRD_MAP } from '../src/data/third-place-map.js';
+import { RESULTS } from '../src/data/knockout.js';
 
 let errors = 0;
 let warnings = 0;
@@ -88,6 +89,35 @@ for (const key of keys) {
   // every qualifying group used exactly once
   const used = Object.values(map).sort().join('');
   if (used !== key) err(`THIRD_MAP["${key}"] assigns ${used}, expected each of ${key} once`);
+}
+
+console.log('Validating knockout results…');
+
+// FIFA match numbers for the R32 → Final bracket (see R32/LATER in bracket.js).
+const KNOCKOUT_MATCHES = new Set([
+  ...Array.from({length: 16}, (_, i) => 73 + i), // R32: 73-88
+  ...Array.from({length: 8}, (_, i) => 89 + i),  // R16: 89-96
+  97, 98, 99, 100,                               // QF
+  101, 102,                                      // SF
+  104,                                            // Final
+]);
+
+for (const [key, res] of Object.entries(RESULTS)) {
+  const num = Number(key);
+  const tag = `Match ${key}`;
+  if (!KNOCKOUT_MATCHES.has(num)) err(`${tag}: not a valid knockout match number`);
+
+  const s = res.score;
+  const scoreOk = Array.isArray(s) && s.length === 2 && s.every(n => Number.isInteger(n) && n >= 0);
+  if (!scoreOk) { err(`${tag}: malformed score ${JSON.stringify(s)} (want [x,y] non-negative ints)`); continue; }
+
+  if (s[0] === s[1]) {
+    const p = res.pens;
+    const pensOk = Array.isArray(p) && p.length === 2 && p.every(n => Number.isInteger(n) && n >= 0) && p[0] !== p[1];
+    if (!pensOk) err(`${tag}: scores level at ${s[0]}-${s[1]} but no valid decisive pens:[x,y]`);
+  } else if (res.pens) {
+    warn(`${tag}: has pens but the match wasn't level after the score recorded`);
+  }
 }
 
 console.log('');
