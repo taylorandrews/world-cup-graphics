@@ -2,18 +2,21 @@
 name: update-results
 description: >
   Use when the user wants to update the World Cup tracker with new match
-  scores or results, refresh standings, or mark games as played. Triggers
-  include "update the tracker", "add the scores from <date>", "<TEAM> beat
-  <TEAM>", "the group stage results are in", or any request to enter goals for
-  matches. Handles editing src/data/fixtures.js, bumping AS_OF, validating, and
-  confirming the graphic recomputes correctly.
+  scores or results, refresh standings, or mark games as played — group stage
+  or knockout rounds. Triggers include "update the tracker", "add the scores
+  from <date>", "<TEAM> beat <TEAM>", "the group stage results are in",
+  "fill in the knockouts", or any request to enter goals for matches. Handles
+  editing src/data/fixtures.js (group stage) and src/data/knockout.js
+  (Round of 32 onward), bumping AS_OF, validating, and confirming the graphic
+  recomputes correctly.
 ---
 
 # Update World Cup results
 
-The entire graphic is derived from `src/data/fixtures.js`. You never edit
-standings, rankings, or the bracket directly — you only add scores to matches,
-and everything else recomputes.
+The entire graphic is derived from `src/data/fixtures.js` (group stage) and
+`src/data/knockout.js` (Round of 32 onward). You never edit standings,
+rankings, or the bracket directly — you only add scores to matches, and
+everything else recomputes.
 
 ## Procedure
 
@@ -40,6 +43,33 @@ and everything else recomputes.
 
 3. **Bump `AS_OF`** at the top of the file to reflect the new cutoff, e.g.
    `export const AS_OF = "Updated June 25, 2026 — through June 24 matches";`
+
+### Knockout rounds (Round of 32 onward)
+
+Once a group's standings are set (or the whole group stage is done), R32
+matchups become concrete — but recording who actually *won* a knockout game
+happens in a separate file, `src/data/knockout.js`, keyed by FIFA match
+number (see `R32`/`LATER` in `src/js/bracket.js` for the schedule and which
+teams/venues map to which number):
+
+```js
+// knockout.js
+82: {score:[3,2], aet:true},              // Belgium 3, Senegal 2 (AET)
+74: {score:[1,1], aet:true, pens:[3,4]},  // level after ET, Paraguay wins on pens
+```
+
+- R32 `score` follows that match's home/away slot order in the `R32` array
+  (e.g. Match 82 = Winner Group G vs. a 3rd-place team; Belgium is home).
+- R16+ `score` is `[a, b]` — goals for the winner of the lower-numbered
+  feeder match, then the higher one.
+- Add `aet:true` for extra time, `pens:[x,y]` for a shootout when level.
+- Figure out which match number a real-world result corresponds to by
+  cross-referencing the venue and the two teams against the `R32`/`LATER`
+  definitions — group winners/runners-up are fixed per group, and third-place
+  slot assignments come from `THIRD_MAP` once the qualifying third-place
+  groups are known (recompute standings first if unsure).
+- A match left out of `RESULTS` renders as a pending "Winner M##" tile; adding
+  a result automatically advances that team into the next round's card.
 
 4. **Validate:** run `npm run validate`. Fix anything it flags (unknown codes,
    duplicate pairings, malformed scores) before continuing.

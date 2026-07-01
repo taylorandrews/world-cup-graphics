@@ -12,23 +12,34 @@ group stage. It renders three sections from a single source of truth:
 2. **The 12 group boxes** (middle) — each is one table: a triangular
    head-to-head score matrix on the left, the standings on the right.
 3. **Live bracket** (bottom) — a miniature color-map of the Round of 32 →
-   Final as it would stand if the group stage ended now, including the eight
-   best third-place teams placed via FIFA's official Annex C matrix.
+   Final, including the eight best third-place teams placed via FIFA's
+   official Annex C matrix. R32 matchups are projected from group standings;
+   once a knockout match is recorded in `knockout.js`, its actual score and
+   winner display and advance through the tree.
 
 Everything is computed live in the browser. There is no backend and no build
 step required to view it — open `index.html` from a static server.
 
 ## The one rule that matters
 
-**All results live in `src/data/fixtures.js`.** To update the graphic after
-matches are played, add a `score:[home, away]` to the relevant match objects
-and bump `AS_OF`. Standings, the ranking, head-to-head cells, third-place
-qualification, and the bracket all recompute from that. Do not hand-edit any
-standings or bracket output — it is all derived.
+**Group-stage results live in `src/data/fixtures.js`; knockout results live
+in `src/data/knockout.js`.** To update the graphic after matches are played,
+add a `score:[home, away]` to the relevant fixtures.js match object (bump
+`AS_OF`) or a result to knockout.js's `RESULTS`. Standings, the ranking,
+head-to-head cells, third-place qualification, and the bracket all recompute
+from that. Do not hand-edit any standings or bracket output — it is all
+derived.
 
 ```js
+// fixtures.js — group stage
 {md:"Jun 24", h:"CZE", a:"MEX", score:[1,2]},  // played
 {md:"Jun 24", h:"RSA", a:"KOR"},               // not yet played (no score)
+```
+
+```js
+// knockout.js — Round of 32 onward, keyed by FIFA match number
+82: {score:[3,2], aet:true},               // Belgium 3-2 Senegal (AET)
+74: {score:[1,1], aet:true, pens:[3,4]},   // level after ET, decided on pens
 ```
 
 ## File map
@@ -40,18 +51,21 @@ src/
     styles.css                   All styling. @imports _palette.generated.css first.
     _palette.generated.css       AUTO-GENERATED color vars — do not edit by hand.
   data/
-    fixtures.js                  ← EDIT RESULTS HERE. Exports DATA + AS_OF.
+    fixtures.js                  ← EDIT GROUP-STAGE RESULTS HERE. Exports DATA + AS_OF.
+    knockout.js                  ← EDIT KNOCKOUT RESULTS HERE. Exports RESULTS.
     palette.js                   Source of truth for group colors. Exports PAL.
     third-place-map.js           FIFA Annex C matrix (495 rows). Exports THIRD_MAP.
   js/
     standings.js                 computeTable(), gd(). Pure functions, no DOM.
     groups.js                    renderGroups() — group boxes + h2h matrices.
-    bracket.js                   R32/LATER schedule, third-place logic,
-                                 renderFullRanking(), renderMiniBracket().
+    bracket.js                   R32/LATER schedule, third-place logic, knockout
+                                 winner resolution, renderFullRanking(),
+                                 renderMiniBracket().
     main.js                      Entry point; wires the three render calls.
 scripts/
   build-palette.mjs              Regenerates _palette.generated.css from palette.js.
-  validate.mjs                   Sanity-checks fixtures + the Annex C matrix.
+  validate.mjs                   Sanity-checks fixtures, the Annex C matrix, and
+                                 knockout.js results.
 ```
 
 ## Data model (`fixtures.js`)
@@ -90,6 +104,28 @@ scripts/
 - R32 → Final links live in `R32` and `LATER` in `bracket.js`. Match 87 (R32)
   and Match 100 (QF) are in Kansas City.
 
+## Knockout results (`knockout.js`)
+
+`RESULTS` is keyed by FIFA match number (73–88 R32, 89–96 R16, 97–100 QF,
+101–102 SF, 104 Final — see `R32`/`LATER` in `bracket.js`):
+
+```js
+{ 82: {score:[3,2], aet:true} }
+```
+
+- For an R32 match, `score` is `[home, away]` in that match's slot order
+  (e.g. Match 82 is Winner Group G vs. a 3rd-place team; `[3,2]` means the
+  home side — Belgium — won).
+- For an R16+ match, `score` is `[a, b]` — goals for the winner of the
+  lower-numbered feeder match, then the higher one (see `LATER` for which
+  two match numbers feed each one).
+- `aet:true` marks extra time. `pens:[x,y]` records a shootout when the
+  score is level; the winner is decided by score, falling back to `pens`.
+- A match absent from `RESULTS` is treated as not yet played — its bracket
+  tile stays a grey "Winner M##" placeholder until it resolves.
+- `bracket.js` resolves winners recursively, so a knockout result
+  automatically advances that team into its next slot's tile once you add it.
+
 ## Conventions
 
 - Plain ES modules, no framework, no bundler, no npm runtime deps.
@@ -98,7 +134,8 @@ scripts/
   `--gG3` = fourth place (faintest). `--tXY` is the readable text color on
   that background.
 - After changing results, run `npm run validate` to catch typos
-  (unknown team codes, duplicate matches, malformed scores).
+  (unknown team codes, duplicate matches, malformed scores, bad knockout
+  match numbers, or a level score with no decisive `pens`).
 
 ## Portal deploy (required after any visual change)
 
@@ -133,7 +170,7 @@ npm run build      # full build: palette + validate + portal bundle
 
 ## Provenance
 
-Results were compiled from public reporting through the dates shown in
-`AS_OF`. The Annex C third-place matrix follows FIFA's published 48-team
-knockout allocation. When updating, verify scores against a primary source
-before committing.
+Results (group-stage and knockout) were compiled from public reporting
+through the dates shown in `AS_OF`. The Annex C third-place matrix follows
+FIFA's published 48-team knockout allocation. When updating, verify scores
+against a primary source before committing.
